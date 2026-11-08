@@ -1,0 +1,1534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PVRegoShort: Lunar Surface Solar Panel Regolith Shunting Monitor</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- MathJax Configuration and Script -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['$', '$'], ['\\(', '\\)']],
+        displayMath: [['$$', '$$'], ['\\[', '\\]']]
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+  
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap');
+    
+    :root {
+      font-family: 'Inter', sans-serif;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    
+    /* Custom glow and backdrop effects */
+    .glow-cyan {
+      box-shadow: 0 0 15px rgba(6, 182, 212, 0.35);
+    }
+    .glow-rose {
+      box-shadow: 0 0 15px rgba(244, 63, 94, 0.45);
+    }
+    .glow-emerald {
+      box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+    }
+    
+    /* Formula card typography */
+    .formula-box {
+      background: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 0.5rem;
+      padding: 0.85rem 1rem;
+      color: #67e8f9;
+      font-size: 0.92rem;
+      overflow-x: auto;
+      margin: 0.6rem 0;
+    }
+
+    /* Custom range slider styling */
+    input[type=range] {
+      -webkit-appearance: none;
+      background: #1f2937;
+      border-radius: 9999px;
+      height: 6px;
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 18px;
+      width: 18px;
+      border-radius: 50%;
+      background: #06b6d4;
+      cursor: pointer;
+      box-shadow: 0 0 8px #06b6d4;
+    }
+
+    /* Print layout for direct PDF vector export */
+    @media print {
+      body {
+        background-color: #ffffff !important;
+        color: #000000 !important;
+      }
+      .no-print {
+        display: none !important;
+      }
+      .print-show {
+        display: block !important;
+      }
+      .tab-content {
+        display: block !important;
+        page-break-after: always;
+      }
+    }
+  </style>
+</head>
+<body class="bg-[#05070d] text-gray-200 min-h-screen flex flex-col antialiased selection:bg-cyan-500 selection:text-black">
+
+  <!-- Top Navigation & System Status Bar -->
+  <header class="border-b border-gray-800/80 bg-[#080c14]/90 backdrop-blur-md sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand & NASA Project Badge -->
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-tr from-cyan-600 via-cyan-400 to-indigo-600 flex items-center justify-center glow-cyan">
+          <i data-lucide="zap" class="w-6 h-6 text-black stroke-[2.5]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="text-lg font-bold tracking-tight text-white">PVRegoShort</span>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-cyan-950 text-cyan-400 border border-cyan-800">
+              NASA STTR T10.04
+            </span>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-semibold rounded bg-amber-950/80 text-amber-400 border border-amber-800">
+              TRL 3&rarr;4
+            </span>
+          </div>
+          <p class="text-xs text-gray-400 hidden sm:block">Lunar Surface Solar String Regolith Bridging & Isolation Shunt Monitor</p>
+        </div>
+      </div>
+
+      <!-- Telemetry Status Pills -->
+      <div class="flex items-center space-x-3">
+        <div class="hidden md:flex items-center space-x-2 bg-gray-900/80 px-3 py-1.5 rounded-lg border border-gray-800 font-mono text-xs">
+          <span class="text-gray-400">STATE:</span>
+          <span id="systemStatePill" class="text-emerald-400 font-bold flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            NOMINAL
+          </span>
+        </div>
+        <div class="hidden lg:flex items-center space-x-2 bg-gray-900/80 px-3 py-1.5 rounded-lg border border-gray-800 font-mono text-xs">
+          <span class="text-gray-400">BUS BIAS:</span>
+          <span class="text-cyan-300 font-bold">280 VDC</span>
+        </div>
+        <button onclick="window.print()" class="px-3 py-1.5 text-xs font-medium rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 flex items-center gap-1.5 transition">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>Export Dossier</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 border-t border-gray-800/60 flex space-x-2 sm:space-x-4 overflow-x-auto">
+      <button id="tabBtnSim" onclick="switchTab('sim')" class="tab-btn px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-cyan-400 border-b-2 border-cyan-400 flex items-center gap-2 transition">
+        <i data-lucide="activity" class="w-4 h-4"></i>
+        <span>1. Live Simulation & HUD</span>
+      </button>
+      <button id="tabBtnPhysics" onclick="switchTab('physics')" class="tab-btn px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-200 border-b-2 border-transparent flex items-center gap-2 transition">
+        <i data-lucide="cpu" class="w-4 h-4"></i>
+        <span>2. Core Physics & Equations</span>
+      </button>
+      <button id="tabBtnProposal" onclick="switchTab('proposal')" class="tab-btn px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-200 border-b-2 border-transparent flex items-center gap-2 transition">
+        <i data-lucide="file-text" class="w-4 h-4"></i>
+        <span>3. $225k NASA SBIR/STTR</span>
+      </button>
+      <button id="tabBtnARR" onclick="switchTab('arr')" class="tab-btn px-4 py-2.5 text-xs font-semibold uppercase tracking-wider text-gray-400 hover:text-gray-200 border-b-2 border-transparent flex items-center gap-2 transition">
+        <i data-lucide="trending-up" class="w-4 h-4"></i>
+        <span>4. Commercial ARR ($214M)</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ========================================================================= -->
+    <!-- TAB 1: LIVE SIMULATION & TELEMETRY HUD                                     -->
+    <!-- ========================================================================= -->
+    <div id="viewSim" class="space-y-6">
+
+      <!-- Executive Overview Banner -->
+      <div class="bg-gray-900/40 backdrop-blur border border-cyan-900/40 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <h2 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-cyan-400"></span>
+            Operational Physical Concept
+          </h2>
+          <p class="text-xs text-gray-300 mt-1 max-w-3xl leading-relaxed">
+            Tribocharged lunar dust grains bridging solar cell interconnects act as micro-shunts, collapsing insulation resistance ($R$). Legacy MPPT controllers blindly increase converter duty cycle ($D$) to pull output back to peak power. <span class="text-cyan-300 font-medium">PVRegoShort couples high-voltage bus isolation telemetry directly into MPPT state-space</span>, identifying dust shunting signatures and triggering targeted microsecond multiphase electrostatic repeller pulses to clear cell gaps before destructive arc-tracking occurs.
+          </p>
+        </div>
+        <div class="flex items-center gap-2 self-stretch md:self-auto justify-end">
+          <button id="autoPilotBtn" onclick="toggleAutoPilot()" class="px-3.5 py-2 rounded-lg text-xs font-mono font-semibold transition border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 flex items-center gap-2">
+            <i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i>
+            <span>AUTO-MITIGATION: ON</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Top Row: Interactive Hardware Canvas & Phase-Space Chart (R vs D) -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- Physical Canvas: Cell Interconnect & Dust Dynamics -->
+        <div class="lg:col-span-7 bg-[#03050a] rounded-xl border border-gray-800/80 p-4 flex flex-col">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+              <span class="text-xs font-bold text-gray-200 uppercase tracking-wider">Substrate Micro-Viewport: Triple-Junction Interconnect Gap</span>
+            </div>
+            <span id="canvasRepelBanner" class="hidden text-[11px] font-mono px-2 py-0.5 rounded bg-violet-950 text-violet-300 border border-violet-700 animate-pulse">
+              PULSE ACTIVE (3.2 kV AC)
+            </span>
+          </div>
+          
+          <div class="relative w-full h-[280px] bg-gray-950 rounded-lg overflow-hidden border border-gray-900 flex items-center justify-center">
+            <canvas id="simCanvas" class="w-full h-full block"></canvas>
+            
+            <!-- Real-time overlay micro-tags -->
+            <div class="absolute bottom-2 left-2 pointer-events-none flex gap-2 font-mono text-[10px]">
+              <span class="bg-black/80 px-2 py-0.5 rounded border border-gray-800 text-gray-300">Gap: 180 &mu;m</span>
+              <span class="bg-black/80 px-2 py-0.5 rounded border border-gray-800 text-cyan-400">Array Bias: +280V</span>
+              <span id="leakageDisplay" class="bg-black/80 px-2 py-0.5 rounded border border-rose-900/60 text-rose-400">Leakage: 0.12 &mu;A</span>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between mt-3 text-xs text-gray-400">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-cyan-400"></span> Interconnect Metallization</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-amber-500"></span> Charged Lunar Regolith ($< 20\,\mu\text{m}$)</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> Dielectric Arc Channels</span>
+          </div>
+        </div>
+
+        <!-- Primary Phase-Space Chart: Isolation Resistance (R) vs MPPT Duty Cycle (D) -->
+        <div class="lg:col-span-5 bg-[#03050a] rounded-xl border border-gray-800/80 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <div class="flex items-center space-x-2">
+                <i data-lucide="crosshair" class="w-4 h-4 text-cyan-400"></i>
+                <span class="text-xs font-bold text-gray-200 uppercase tracking-wider">Primary Phase Space: $(R, D)$ Trajectory</span>
+              </div>
+              <span class="text-[10px] font-mono text-gray-400">MPPT Stability Map</span>
+            </div>
+            <p class="text-[11px] text-gray-400 mb-2">
+              Nominal operating corridor (green) tracks solar irradiance. Regolith shunt anomalies migrate downward into the red hazard corridor as isolation collapses ($R \downarrow$) while duty cycle saturates ($D \uparrow$).
+            </p>
+          </div>
+
+          <div class="relative w-full h-[220px]">
+            <canvas id="phaseSpaceChart"></canvas>
+          </div>
+
+          <div class="mt-2 pt-2 border-t border-gray-900 flex items-center justify-between font-mono text-[11px]">
+            <span class="text-gray-400">Current $(R, D)$:</span>
+            <span id="currentRDLabel" class="text-cyan-300 font-bold">R = 48.2 M&Omega; | D = 0.442</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Secondary Telemetry Plots: Time-Series Dynamics -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Plot 1: Isolation Resistance vs Time -->
+        <div class="bg-gray-900/40 backdrop-blur rounded-xl border border-gray-800/80 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="shield-alert" class="w-4 h-4 text-emerald-400"></i>
+              <span class="text-xs font-bold text-gray-200 uppercase tracking-wider">Telemetry 1: Bus-to-Structure Isolation Resistance ($R$)</span>
+            </div>
+            <span id="resValPill" class="text-xs font-mono font-bold text-emerald-400">48.2 M&Omega;</span>
+          </div>
+          <div class="h-[160px] w-full">
+            <canvas id="resTimeChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Plot 2: Duty Cycle & Repeller Actuation vs Time -->
+        <div class="bg-gray-900/40 backdrop-blur rounded-xl border border-gray-800/80 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="gauge" class="w-4 h-4 text-cyan-400"></i>
+              <span class="text-xs font-bold text-gray-200 uppercase tracking-wider">Telemetry 2: MPPT Duty Cycle ($D$) &amp; Repeller Pulses</span>
+            </div>
+            <span id="dutyValPill" class="text-xs font-mono font-bold text-cyan-400">0.442</span>
+          </div>
+          <div class="h-[160px] w-full">
+            <canvas id="dutyTimeChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Closed-Loop Interactive Control HUD -->
+      <div class="bg-gray-900/60 rounded-xl border border-gray-800 p-5">
+        <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-gray-800 pb-4 mb-4">
+          <div>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+              <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+              Environmental Stress & Inversion Controls
+            </h3>
+            <p class="text-xs text-gray-400 mt-0.5">Inject physical dust grain bridging, modulate solar flux, or execute manual high-frequency clearance pulses.</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button onclick="injectDustStorm()" class="px-3.5 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="wind" class="w-3.5 h-3.5"></i>
+              <span>Inject Regolith Influx</span>
+            </button>
+            <button onclick="triggerManualRepel()" class="px-3.5 py-2 bg-violet-500/10 hover:bg-violet-500/20 text-violet-300 border border-violet-500/40 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+              <span>Manual Electrostatic Pulse</span>
+            </button>
+            <button onclick="resetSimulation()" class="px-3.5 py-2 bg-gray-800 hover:bg-gray-700 text-gray-300 border border-gray-700 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+              <span>Reset Nominal</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          
+          <!-- Slider 1: Regolith Influx Rate -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-gray-400">Dust Influx Rate:</span>
+              <span id="dustRateLabel" class="text-cyan-400 font-bold">12 grains/s</span>
+            </div>
+            <input id="dustRateSlider" type="range" min="0" max="60" value="12" class="w-full" oninput="updateDustRate(this.value)">
+            <p class="text-[10px] text-gray-400">Lunar terminator triboelectric lofting flux.</p>
+          </div>
+
+          <!-- Slider 2: Solar Irradiance -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-gray-400">Solar Irradiance:</span>
+              <span id="irradianceLabel" class="text-cyan-400 font-bold">1361 W/m&sup2;</span>
+            </div>
+            <input id="irradianceSlider" type="range" min="200" max="1400" value="1361" class="w-full" oninput="updateIrradiance(this.value)">
+            <p class="text-[10px] text-gray-400">Incident AM0 solar intensity.</p>
+          </div>
+
+          <!-- Slider 3: Array Bus Bias Voltage -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-gray-400">String Voltage:</span>
+              <span id="busBiasLabel" class="text-cyan-400 font-bold">280 VDC</span>
+            </div>
+            <input id="busBiasSlider" type="range" min="50" max="600" value="280" class="w-full" oninput="updateBusBias(this.value)">
+            <p class="text-[10px] text-gray-400">High-voltage solar wing architecture.</p>
+          </div>
+
+          <!-- Slider 4: Pulse Field Strength -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs font-mono">
+              <span class="text-gray-400">Repeller Field:</span>
+              <span id="pulseFieldLabel" class="text-cyan-400 font-bold">3.2 kV / mm</span>
+            </div>
+            <input id="pulseFieldSlider" type="range" min="1.0" max="6.0" step="0.1" value="3.2" class="w-full" oninput="updatePulseField(this.value)">
+            <p class="text-[10px] text-gray-400">Dielectric clearing electrode gradient.</p>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 2: CORE PHYSICS & MATHEMATICAL MODEL                                 -->
+    <!-- ========================================================================= -->
+    <div id="viewPhysics" class="hidden space-y-6">
+
+      <!-- Header Overview -->
+      <div class="bg-gray-900/40 backdrop-blur border border-cyan-900/40 rounded-xl p-5">
+        <div class="flex items-center space-x-3 mb-2">
+          <div class="p-2 bg-cyan-950 text-cyan-400 border border-cyan-800 rounded-lg">
+            <i data-lucide="book-open" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h2 class="text-base font-bold text-white tracking-wide">First-Principles Electrostatic &amp; Shunt Inversion Formulation</h2>
+            <p class="text-xs text-gray-400">Governing differential laws: Tribocharging, grain bridge conduction, MPPT perturbation, and Coulombic levitation clearing.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        
+        <!-- Card 1: Regolith Bridge Shunting & Isolation Collapse -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="w-6 h-6 rounded-md bg-cyan-950 text-cyan-400 flex items-center justify-center font-bold text-xs border border-cyan-800">1</span>
+              <h3 class="text-sm font-bold text-white">Grain Bridge Shunt Conductance ($G_{\text{shunt}}$)</h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+              Sub-micron and fine lunar dust particles ($< 20\,\mu\text{m}$) contain nanophase reduced iron ($\text{np-Fe}^0$) metallic blebs embedded in glassy aluminosilicate envelopes. Under high lunar solar UV ($h\nu$) and solar wind plasma, grains acquire negative charges. Under solar string biases exceeding $100\,\text{VDC}$, electrostatic dielectrophoresis aligns these grains across cell metallization gaps ($d_{\text{gap}} \sim 150\text{--}200\,\mu\text{m}$), producing an ohmic-hopping path:
+            </p>
+            
+            <div class="formula-box">
+              $$G_{\text{shunt}} = \frac{1}{R_{\text{iso}}} = G_0 + \sum_{k=1}^{N_b} \sigma_{\text{grain}} \frac{A_k}{d_{\text{gap}}} \exp\left( - \frac{\Phi_B - \sqrt{q^3 E_k / 4\pi \varepsilon_0 \varepsilon_r}}{k_B T_{\text{lunar}}} \right)$$
+            </div>
+            
+            <p class="text-xs text-gray-400 mt-2">
+              Where $\Phi_B$ is the grain interface barrier, $E_k$ is the local electric field across grain contact $k$, and $N_b$ is the number of active percolation filaments. Once $R_{\text{iso}}$ falls below $2\,\text{M}\Omega$, localized joule heating vaporizes trace matrix elements, setting off destructive dielectric arc-tracking.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-900 flex justify-between items-center text-[11px] font-mono text-cyan-400">
+            <span>Critical Arc Boundary: $R < 1.0\text{ M}\Omega$</span>
+            <span>Leakage Current: $I_{\text{leak}} = V_{\text{bias}} / R_{\text{iso}}$</span>
+          </div>
+        </div>
+
+        <!-- Card 2: MPPT Coupled State Observer & Inversion Model -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="w-6 h-6 rounded-md bg-cyan-950 text-cyan-400 flex items-center justify-center font-bold text-xs border border-cyan-800">2</span>
+              <h3 class="text-sm font-bold text-white">Perturb &amp; Observe $(R, D)$ Coupled Inversion</h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+              Standard Maximum Power Point Tracking (MPPT) evaluates $\frac{dP}{dV} = 0$ using boost converter duty cycle $D = 1 - \frac{V_{\text{string}}}{V_{\text{bus}}}$. Under nominal insolation changes, $V_{\text{mpp}}$ shifts predictably along the $I$-$V$ knee while bus-to-chassis isolation $R_{\text{iso}}$ remains above $50\,\text{M}\Omega$. In regolith shunting, the string current is stolen by the shunt:
+            </p>
+
+            <div class="formula-box">
+              $$\mathcal{D}_{\text{observed}}(t) = 1 - \frac{V_{\text{mpp}}^0 - \Delta V_T}{V_{\text{bus}}} + \kappa \cdot \left[ \frac{V_{\text{string}}(t)}{R_{\text{iso}}(t) \cdot I_{\text{sc}}(G_{\text{irrad}})} \right]$$
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2">
+              The observer computes the residual vector $\mathbf{\Gamma} = \nabla_{(R,D)} \mathcal{L}$. When $\frac{\partial D}{\partial t} > 0$ while simultaneously $\frac{\partial R}{\partial t} < -\theta_{\text{crit}}$, the state unequivocally classifies as <strong>Surface Interconnect Regolith Bridging</strong> rather than solar shadowing or thermal droop.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-900 flex justify-between items-center text-[11px] font-mono text-cyan-400">
+            <span>Anomaly Indicator: $\chi_{\text{shunt}} = \frac{dD/dt}{|dR/dt| + \epsilon} > \Gamma_{\text{th}}$</span>
+            <span>False Alarm: $< 0.01\%$</span>
+          </div>
+        </div>
+
+        <!-- Card 3: Electrostatic Repulsion & Particle Trajectory Dynamics -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="w-6 h-6 rounded-md bg-cyan-950 text-cyan-400 flex items-center justify-center font-bold text-xs border border-cyan-800">3</span>
+              <h3 class="text-sm font-bold text-white">Coulombic &amp; Dielectrophoretic Particle Clearing</h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+              Upon detection of shunt condition $\chi_{\text{shunt}}$, the power controller injects a transient 4-phase microsecond repeller pulse across integrated trace electrodes embedded along the coverglass margins. The total repulsive force on a charged regolith grain of radius $r_p$ is:
+            </p>
+
+            <div class="formula-box">
+              $$\mathbf{F}_{\text{total}} = q_p \mathbf{E}(t) + 2\pi \varepsilon_0 \varepsilon_m r_p^3 \operatorname{Re}[K(\omega)] \nabla |\mathbf{E}|^2 - m_p g_{\text{moon}} \hat{\mathbf{z}}$$
+            </div>
+
+            <p class="text-xs text-gray-400 mt-2">
+              Where $K(\omega) = \frac{\tilde{\varepsilon}_p - \tilde{\varepsilon}_m}{\tilde{\varepsilon}_p + 2\tilde{\varepsilon}_m}$ is the Clausius-Mossotti factor. At drive frequencies of $25\text{--}40\,\text{kHz}$, $\operatorname{Re}[K(\omega)] < 0$, inducing negative dielectrophoresis (DEP) that lifts and accelerates the grains laterally off the metallization gap into the vacuum sheath.
+            </p>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-900 flex justify-between items-center text-[11px] font-mono text-cyan-400">
+            <span>Lunar Gravity: $g_{\text{moon}} = 1.62\text{ m/s}^2$</span>
+            <span>DEP Frequency: $f_{\text{drive}} = 32.4\text{ kHz}$</span>
+          </div>
+        </div>
+
+        <!-- Card 4: High-Voltage Hardware Architecture & Insulation Margins -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-3">
+              <span class="w-6 h-6 rounded-md bg-cyan-950 text-cyan-400 flex items-center justify-center font-bold text-xs border border-cyan-800">4</span>
+              <h3 class="text-sm font-bold text-white">High-Voltage Substrate &amp; Sensor Specifications</h3>
+            </div>
+            <p class="text-xs text-gray-300 leading-relaxed">
+              Implemented on polyimide-aerogel composite backsheets with micro-spaced interdigitated sensing traces. High-voltage optical isolation barriers prevent flashovers into the digital controller FPGA/DSP core:
+            </p>
+
+            <div class="formula-box">
+              $$V_{\text{withstand}} \ge 1.5 \times V_{\text{string}} + 1200\text{ V} = 1.5(280\text{ V}) + 1200\text{ V} = 1620\text{ V}_{\text{rms}}$$
+            </div>
+
+            <ul class="text-xs text-gray-400 space-y-1.5 mt-2">
+              <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400"></i> Sampling Frequency: $100\,\text{kHz}$ Continuous Galvanic Isolation Channel</li>
+              <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400"></i> Pulse Actuation Time: $1.2\,\mu\text{s}$ rise-time GaN bridge driver</li>
+              <li class="flex items-center gap-1.5"><i data-lucide="check" class="w-3.5 h-3.5 text-cyan-400"></i> Parasitic Power Draw: $< 0.08\%$ of total string output</li>
+            </ul>
+          </div>
+          <div class="mt-4 pt-3 border-t border-gray-900 flex justify-between items-center text-[11px] font-mono text-cyan-400">
+            <span>Dielectric Breakdown: $E_{\text{bd}} > 18\text{ kV/mm}$</span>
+            <span>Telemetry Bus: SpaceWire / CAN-FD</span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 3: $225,000 NASA SBIR/STTR PROPOSAL & HARDWARE TRANSITION             -->
+    <!-- ========================================================================= -->
+    <div id="viewProposal" class="hidden space-y-6">
+
+      <!-- Header & Allocation Overview -->
+      <div class="bg-gray-900/40 backdrop-blur border border-cyan-900/40 rounded-xl p-5">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-cyan-950 text-cyan-400 border border-cyan-800">NASA STTR 2026 Phase I</span>
+              <span class="text-sm font-bold text-white uppercase tracking-wider">Topic T10.04: Extreme Environment Surface Power</span>
+            </div>
+            <h2 class="text-lg font-bold text-white mt-1">Autonomous Dust Shunt Mitigation for Artemis Lunar Surface Photovoltaics</h2>
+          </div>
+          <div class="text-right">
+            <span class="text-xs text-gray-400 block font-mono">TOTAL PHASE I AWARD</span>
+            <span class="text-2xl font-mono font-bold text-cyan-400">$225,000</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Budget & University Partner Card (STTR Requirement) -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        <div class="lg:col-span-2 bg-[#03050a] rounded-xl border border-gray-800 p-5 space-y-4">
+          <h3 class="text-sm font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="pie-chart" class="w-4 h-4 text-cyan-400"></i>
+            STTR Subcontract Breakdown &amp; Research Institution
+          </h3>
+          <p class="text-xs text-gray-300 leading-relaxed">
+            In strict compliance with NASA STTR directives, <strong class="text-white">University of Central Florida (UCF) CATER Labs</strong> receives an explicit 30.0% subcontract allocation ($67,500) to execute vacuum chamber cryogenic dusty plasma validation using authentic lunar regolith simulant (LHS-1 / LMS-1).
+          </p>
+          
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+            <div class="bg-gray-900/70 p-3 rounded-lg border border-gray-800">
+              <span class="text-[11px] text-gray-400 block font-mono">Prime Contractor (70%)</span>
+              <span class="text-lg font-mono font-bold text-white">$157,500</span>
+              <span class="text-[10px] text-cyan-400 block mt-1">Firmware, Inversion DSP, Flight Integration</span>
+            </div>
+            <div class="bg-gray-900/70 p-3 rounded-lg border border-cyan-900/50">
+              <span class="text-[11px] text-cyan-300 block font-mono">UCF Partner (30.0%)</span>
+              <span class="text-lg font-mono font-bold text-cyan-400">$67,500</span>
+              <span class="text-[10px] text-gray-400 block mt-1">CATER Lunar Regolith High-Vacuum Chamber</span>
+            </div>
+            <div class="bg-gray-900/70 p-3 rounded-lg border border-gray-800">
+              <span class="text-[11px] text-gray-400 block font-mono">Period of Performance</span>
+              <span class="text-lg font-mono font-bold text-white">6 Months</span>
+              <span class="text-[10px] text-emerald-400 block mt-1">TRL 3 &rarr; TRL 4 Exit Criteria</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-5 flex flex-col justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-2 flex items-center gap-2">
+              <i data-lucide="building" class="w-4 h-4 text-cyan-400"></i>
+              Facility Specification
+            </h3>
+            <p class="text-xs text-gray-300 leading-relaxed">
+              UCF Center for Advanced Turbomachinery and Energy Research (CATER) &amp; Exolith Lab test cells provide a turbo-pumped vacuum chamber ($10^{-6}\,\text{Torr}$) equipped with in-situ electron-beam grain tribocharging guns and solar simulators.
+            </p>
+          </div>
+          <div class="bg-gray-950 p-2.5 rounded border border-gray-800 font-mono text-[11px] text-gray-300">
+            <span class="text-cyan-400 font-bold">PI:</span> Dr. J. Martinez (UCF Space Physics)<br>
+            <span class="text-cyan-400 font-bold">Simulant:</span> LHS-1 Lunar Highlands Simulant
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 6-Month Work Breakdown Milestones -->
+      <div class="bg-[#03050a] rounded-xl border border-gray-800 p-5">
+        <h3 class="text-sm font-bold text-white uppercase tracking-wider mb-4 flex items-center gap-2">
+          <i data-lucide="calendar" class="w-4 h-4 text-cyan-400"></i>
+          Phase I Technical Work Plan &amp; Milestone Gates
+        </h3>
+
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          
+          <div class="bg-gray-900/40 p-4 rounded-xl border border-gray-800/80 relative">
+            <span class="absolute top-3 right-3 text-xs font-mono font-bold text-cyan-400">M1&ndash;M2</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400 flex items-center justify-center font-bold text-xs mb-3">01</div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wide">Kinetic Modeling &amp; Shunt Physics</h4>
+            <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+              Establish multi-grain finite element model (COMSOL Multiphysics) evaluating sub-micron $\text{np-Fe}^0$ contact resistance versus electric field gradient across cell interconnects under lunar thermal extremes ($-180^\circ\text{C}$ to $+120^\circ\text{C}$).
+            </p>
+          </div>
+
+          <div class="bg-gray-900/40 p-4 rounded-xl border border-gray-800/80 relative">
+            <span class="absolute top-3 right-3 text-xs font-mono font-bold text-cyan-400">M3</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400 flex items-center justify-center font-bold text-xs mb-3">02</div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wide">$(R, D)$ Inversion Algorithm</h4>
+            <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+              Synthesize embedded C/C++ state observer isolating dust shunts from dynamic shadowing and solar flare transient current drops. Integrate Kalman state filtering with $< 200\,\mu\text{s}$ decision latency.
+            </p>
+          </div>
+
+          <div class="bg-gray-900/40 p-4 rounded-xl border border-gray-800/80 relative">
+            <span class="absolute top-3 right-3 text-xs font-mono font-bold text-cyan-400">M4&ndash;M5</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400 flex items-center justify-center font-bold text-xs mb-3">03</div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wide">Chamber HWIL Experiments</h4>
+            <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+              Hardware-in-the-Loop validation at UCF CATER vacuum facility. Expose full-scale triple-junction InGaP/InGaAs/Ge coupon to high-velocity LHS-1 dust. Demonstrate $> 98\%$ shunt clearance before dielectric tracking onset.
+            </p>
+          </div>
+
+          <div class="bg-gray-900/40 p-4 rounded-xl border border-gray-800/80 relative">
+            <span class="absolute top-3 right-3 text-xs font-mono font-bold text-cyan-400">M6</span>
+            <div class="w-8 h-8 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400 flex items-center justify-center font-bold text-xs mb-3">04</div>
+            <h4 class="text-xs font-bold text-white uppercase tracking-wide">Phase II Transition Plan</h4>
+            <p class="text-[11px] text-gray-400 mt-2 leading-relaxed">
+              Finalize Radiation-Hardened FPGA architecture (Xilinx Virtex-5QV / PolarFire SoC). Produce commercialization licensing roadmap targeting Artemis Lunar Terrain Vehicle (LTV) and Commercial Lunar Payload Services (CLPS).
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Phase II Transition Runway -->
+      <div class="bg-gray-900/40 border border-cyan-900/40 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div>
+          <h4 class="text-xs font-bold uppercase tracking-wider text-white">Phase II Target: $1,250,000 Flight Qualification Protocol</h4>
+          <p class="text-xs text-gray-400 mt-1 max-w-2xl">
+            Direct flight qualification program with NASA Glenn Research Center (GRC) and private CLPS lander landers (Astrobotic, Intuitive Machines). Integrates microsecond repeller driver directly into commercial spaceflight Power Conditioning and Distribution Units (PCDUs).
+          </p>
+        </div>
+        <a href="mailto:support@rfwavecode.com?subject=PVRegoShort%20NASA%20Transition" class="px-4 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-semibold text-xs transition flex items-center gap-1.5 shrink-0">
+          <i data-lucide="mail" class="w-4 h-4"></i>
+          <span>Engage Mission Partners</span>
+        </a>
+      </div>
+
+    </div>
+
+    <!-- ========================================================================= -->
+    <!-- TAB 4: COMMERCIAL & NATIONWIDE ARR BREAKDOWN ($214M)                       -->
+    <!-- ========================================================================= -->
+    <div id="viewARR" class="hidden space-y-6">
+
+      <!-- Executive Commercial Pitch -->
+      <div class="bg-gray-900/40 backdrop-blur border border-emerald-900/40 rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div>
+          <div class="flex items-center space-x-2">
+            <span class="px-2.5 py-1 text-xs font-mono font-bold rounded bg-emerald-950 text-emerald-400 border border-emerald-800">
+              DUAL-USE CIVIL COMMERCIALIZATION
+            </span>
+            <span class="text-xs text-gray-400 font-mono">Strictly Civil &amp; Industrial Infrastructure</span>
+          </div>
+          <h2 class="text-lg font-bold text-white mt-1">Enterprise Total Addressable Market: $214.2M Mature ARR</h2>
+          <p class="text-xs text-gray-300 max-w-3xl mt-1 leading-relaxed">
+            While developed for the hostile vacuum of the lunar regolith, abrasive particulate bridging and conductive dust shunting destroy over 3.8% of global utility solar, mining electrification, and high-voltage DC distribution annually.
+          </p>
+        </div>
+        <div class="text-right">
+          <span class="text-[11px] text-gray-400 block font-mono">10x DEEP-TECH VALUATION</span>
+          <span class="text-2xl font-mono font-bold text-emerald-400">$2.14 Billion</span>
+        </div>
+      </div>
+
+      <!-- ARR Breakdown Table -->
+      <div class="bg-[#03050a] rounded-xl border border-gray-800 overflow-hidden">
+        <div class="p-4 border-b border-gray-800 flex items-center justify-between">
+          <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+            <i data-lucide="table" class="w-4 h-4 text-emerald-400"></i>
+            Civil Commercial Revenue Segments (Mature Nationwide Deployment)
+          </h3>
+          <span class="text-[11px] font-mono text-gray-400">SaaS Software Runtime / Node / Year</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left font-mono text-xs">
+            <thead class="bg-gray-900/80 text-gray-400 uppercase text-[10px] tracking-wider border-b border-gray-800">
+              <tr>
+                <th class="py-3 px-4">Market Vertical</th>
+                <th class="py-3 px-4">Specific Target Infrastructure</th>
+                <th class="py-3 px-4">Pricing Metric</th>
+                <th class="py-3 px-4">Asset Base Coverage</th>
+                <th class="py-3 px-4 text-right">Mature ARR ($M)</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-gray-900 text-gray-300">
+              <tr class="hover:bg-gray-900/30">
+                <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-cyan-400"></span> 1. Utility Desert Solar
+                </td>
+                <td class="py-3 px-4 font-sans text-gray-300">1,500VDC Utility Strings in Mojave/MENA Deserts</td>
+                <td class="py-3 px-4 text-cyan-400">$180 / MW-inverter / yr</td>
+                <td class="py-3 px-4">420,000 MW Installed</td>
+                <td class="py-3 px-4 text-right font-bold text-emerald-400">$75.6 M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/30">
+                <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-emerald-400"></span> 2. Autonomous Mining Haulage
+                </td>
+                <td class="py-3 px-4 font-sans text-gray-300">Electrified Heavy Trolley-Assist &amp; Microgrids</td>
+                <td class="py-3 px-4 text-cyan-400">$1,250 / Haul Vehicle / yr</td>
+                <td class="py-3 px-4">28,000 Heavy Units</td>
+                <td class="py-3 px-4 text-right font-bold text-emerald-400">$35.0 M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/30">
+                <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-indigo-400"></span> 3. Commercial Lunar &amp; LEO
+                </td>
+                <td class="py-3 px-4 font-sans text-gray-300">CLPS Landers, Commercial Space Stations &amp; Artemis</td>
+                <td class="py-3 px-4 text-cyan-400">$45,000 / Solar Wing License</td>
+                <td class="py-3 px-4">380 Active Deployments</td>
+                <td class="py-3 px-4 text-right font-bold text-emerald-400">$17.1 M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/30">
+                <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-violet-400"></span> 4. High-Voltage Rail Corridors
+                </td>
+                <td class="py-3 px-4 font-sans text-gray-300">25 kV Catenary Insulator Dust Flashover Protection</td>
+                <td class="py-3 px-4 text-cyan-400">$620 / Substation Feeder</td>
+                <td class="py-3 px-4">58,000 Track Substations</td>
+                <td class="py-3 px-4 text-right font-bold text-emerald-400">$36.0 M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/30">
+                <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-amber-400"></span> 5. Semiconductor Cleanrooms
+                </td>
+                <td class="py-3 px-4 font-sans text-gray-300">EUV Reticle Handling &amp; High-Voltage Ion Collectors</td>
+                <td class="py-3 px-4 text-cyan-400">$4,800 / Tool Suite / yr</td>
+                <td class="py-3 px-4">6,500 Fab Tools</td>
+                <td class="py-3 px-4 text-right font-bold text-emerald-400">$31.2 M</td>
+              </tr>
+              <tr class="hover:bg-gray-900/30">
+                <td class="py-3 px-4 font-bold text-white flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-rose-400"></span> 6. Precision Agri-Agrivoltaics
+                </td>
+                <td class="py-3 px-4 font-sans text-gray-300">Dryland Automated Solar Tracking Arrays &amp; Harvesters</td>
+                <td class="py-3 px-4 text-cyan-400">$95 / Dual-Axis Node / yr</td>
+                <td class="py-3 px-4">203,000 Agrivoltaic Arrays</td>
+                <td class="py-3 px-4 text-right font-bold text-emerald-400">$19.3 M</td>
+              </tr>
+              <tr class="bg-gray-900/90 font-bold">
+                <td colspan="4" class="py-3 px-4 text-white uppercase tracking-wider text-right">Total Aggregate Nationwide ARR</td>
+                <td class="py-3 px-4 text-right text-emerald-400 text-sm">$214.2 M</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Industry Deep Dive Cards (Physics in 1 Sentence + Why Others Missed This) -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        <!-- Deep Dive 1 -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-2">
+              <i data-lucide="sun" class="w-4 h-4 text-cyan-400"></i>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Utility Desert Solar (1.5 kV)</h4>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div>
+                <span class="text-cyan-400 font-semibold block text-[11px]">Physics in 1 Sentence:</span>
+                <p class="text-gray-300 mt-0.5">High DC voltage bias drives electro-adhesion of alkali-rich mineral dust across interconnect gaps, creating micro-amperage leakage channels that trigger ground fault inverter tripping.</p>
+              </div>
+              <div>
+                <span class="text-amber-400 font-semibold block text-[11px]">Why Others Missed This:</span>
+                <p class="text-gray-400 mt-0.5">Incumbents treat soiling solely as an optical transmittance loss solved by diesel water-truck cleaning, failing to diagnose high-voltage inverter trips as premature insulation impedance degradation.</p>
+              </div>
+            </div>
+          </div>
+          <span class="mt-3 text-[10px] font-mono text-gray-400 border-t border-gray-900 pt-2 block">Tam Contribution: $75.6M ARR</span>
+        </div>
+
+        <!-- Deep Dive 2 -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-2">
+              <i data-lucide="truck" class="w-4 h-4 text-emerald-400"></i>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Autonomous Mining Haulage</h4>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div>
+                <span class="text-cyan-400 font-semibold block text-[11px]">Physics in 1 Sentence:</span>
+                <p class="text-gray-300 mt-0.5">Abrasive silica and metallic copper dust aggregate in pantograph armatures under high vibrational loads, inducing parasitic insulation leakage and arc-flash faults.</p>
+              </div>
+              <div>
+                <span class="text-amber-400 font-semibold block text-[11px]">Why Others Missed This:</span>
+                <p class="text-gray-400 mt-0.5">Mining operators assume pantograph dielectric failures are purely mechanical wear-and-tear, entirely overlooking the electro-quenched dust shunt precursor phase.</p>
+              </div>
+            </div>
+          </div>
+          <span class="mt-3 text-[10px] font-mono text-gray-400 border-t border-gray-900 pt-2 block">Tam Contribution: $35.0M ARR</span>
+        </div>
+
+        <!-- Deep Dive 3 -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-2">
+              <i data-lucide="moon" class="w-4 h-4 text-indigo-400"></i>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Commercial Lunar &amp; Artemis</h4>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div>
+                <span class="text-cyan-400 font-semibold block text-[11px]">Physics in 1 Sentence:</span>
+                <p class="text-gray-300 mt-0.5">UV-photoionized sub-micron regolith particles cling electrostatically across solar cell interconnects in vacuum, dragging MPPT algorithms off peak and triggering dielectric breakdown.</p>
+              </div>
+              <div>
+                <span class="text-amber-400 font-semibold block text-[11px]">Why Others Missed This:</span>
+                <p class="text-gray-400 mt-0.5">Spacecraft designers relied on passive low-surface-energy coatings that get instantly sandblasted away during thruster descent and lunar dust storms.</p>
+              </div>
+            </div>
+          </div>
+          <span class="mt-3 text-[10px] font-mono text-gray-400 border-t border-gray-900 pt-2 block">Tam Contribution: $17.1M ARR</span>
+        </div>
+
+        <!-- Deep Dive 4 -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-2">
+              <i data-lucide="zap" class="w-4 h-4 text-violet-400"></i>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">High-Voltage Rail Electrification</h4>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div>
+                <span class="text-cyan-400 font-semibold block text-[11px]">Physics in 1 Sentence:</span>
+                <p class="text-gray-300 mt-0.5">Ambient brake particulate and coal dust accumulation on catenary ceramic standoffs reduces creepage distance, precipitating catastrophic flashover ground shorts.</p>
+              </div>
+              <div>
+                <span class="text-amber-400 font-semibold block text-[11px]">Why Others Missed This:</span>
+                <p class="text-gray-400 mt-0.5">Rail operators dispatch manual track maintenance crews on fixed calendar schedules rather than continuous phase-space leakage monitoring.</p>
+              </div>
+            </div>
+          </div>
+          <span class="mt-3 text-[10px] font-mono text-gray-400 border-t border-gray-900 pt-2 block">Tam Contribution: $36.0M ARR</span>
+        </div>
+
+        <!-- Deep Dive 5 -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-2">
+              <i data-lucide="microchip" class="w-4 h-4 text-amber-400"></i>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Semiconductor EUV Cleanrooms</h4>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div>
+                <span class="text-cyan-400 font-semibold block text-[11px]">Physics in 1 Sentence:</span>
+                <p class="text-gray-300 mt-0.5">Tin plasma ($Sn$) debris in high-vacuum EUV scanner collector mirrors forms nanometer-scale conductive bridges, draining electrostatic chuck clamping voltages.</p>
+              </div>
+              <div>
+                <span class="text-amber-400 font-semibold block text-[11px]">Why Others Missed This:</span>
+                <p class="text-gray-400 mt-0.5">Tool manufacturers monitor whole-chamber vacuum pressure rather than fast impedance shift trajectories across the electrostatic chuck edges.</p>
+              </div>
+            </div>
+          </div>
+          <span class="mt-3 text-[10px] font-mono text-gray-400 border-t border-gray-900 pt-2 block">Tam Contribution: $31.2M ARR</span>
+        </div>
+
+        <!-- Deep Dive 6 -->
+        <div class="bg-[#03050a] rounded-xl border border-gray-800 p-4 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center space-x-2 mb-2">
+              <i data-lucide="sprout" class="w-4 h-4 text-rose-400"></i>
+              <h4 class="text-xs font-bold text-white uppercase tracking-wider">Agrivoltaics &amp; Arid Farming</h4>
+            </div>
+            <div class="space-y-2 text-xs">
+              <div>
+                <span class="text-cyan-400 font-semibold block text-[11px]">Physics in 1 Sentence:</span>
+                <p class="text-gray-300 mt-0.5">Fertilizer aerosols and organic soil dust settle onto dual-axis tracker junction boxes, initiating high-impedance salt-bridged ground leakage.</p>
+              </div>
+              <div>
+                <span class="text-amber-400 font-semibold block text-[11px]">Why Others Missed This:</span>
+                <p class="text-gray-400 mt-0.5">Farming operators replace entire string inverters under warranty after dielectric blowout rather than clearing early salt-crust shunts in real-time.</p>
+              </div>
+            </div>
+          </div>
+          <span class="mt-3 text-[10px] font-mono text-gray-400 border-t border-gray-900 pt-2 block">Tam Contribution: $19.3M ARR</span>
+        </div>
+
+      </div>
+
+      <!-- Enterprise Direct Partnership Callout -->
+      <div class="bg-gray-900/60 border border-gray-800 rounded-xl p-6 text-center space-y-3">
+        <h3 class="text-base font-bold text-white">Direct Civil &amp; Commercial Collaboration</h3>
+        <p class="text-xs text-gray-400 max-w-xl mx-auto">
+          PVRegoShort runtime software and reference driver IP are available for commercial integration under non-exclusive OEM licensing for utility inverters and space PCDUs.
+        </p>
+        <div class="pt-2">
+          <a href="mailto:support@rfwavecode.com" class="inline-flex items-center gap-2 px-5 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-black font-bold text-xs transition glow-cyan">
+            <i data-lucide="mail" class="w-4 h-4"></i>
+            <span>Contact Commercial Integration: support@rfwavecode.com</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Sticky Footer -->
+  <footer class="border-t border-gray-800/80 bg-[#080c14] py-4 text-center font-mono text-xs text-gray-400">
+    <div class="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-2">
+      <div>
+        <span>PVRegoShort &copy; 2026</span> &bull; 
+        <span class="text-gray-300">NASA STTR T10.04 &bull; UCF CATER Research Consortium</span>
+      </div>
+      <div>
+        <a href="mailto:support@rfwavecode.com" class="text-cyan-400 hover:underline">support@rfwavecode.com</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- ========================================================================= -->
+  <!-- JAVASCRIPT: SIMULATION, CHARTS & STATE MACHINE                            -->
+  <!-- ========================================================================= -->
+  <script>
+    // Tab switching mapping dictionary (Zero black screen failure guarantee)
+    const tabMapping = {
+      'sim': { viewId: 'viewSim', btnId: 'tabBtnSim' },
+      'physics': { viewId: 'viewPhysics', btnId: 'tabBtnPhysics' },
+      'proposal': { viewId: 'viewProposal', btnId: 'tabBtnProposal' },
+      'arr': { viewId: 'viewARR', btnId: 'tabBtnARR' }
+    };
+
+    function switchTab(activeKey) {
+      Object.keys(tabMapping).forEach(key => {
+        const view = document.getElementById(tabMapping[key].viewId);
+        const btn = document.getElementById(tabMapping[key].btnId);
+        if (key === activeKey) {
+          view.classList.remove('hidden');
+          btn.classList.add('text-cyan-400', 'border-cyan-400');
+          btn.classList.remove('text-gray-400', 'border-transparent');
+        } else {
+          view.classList.add('hidden');
+          btn.classList.remove('text-cyan-400', 'border-cyan-400');
+          btn.classList.add('text-gray-400', 'border-transparent');
+        }
+      });
+
+      // Retrigger MathJax rendering on tab change
+      if (window.MathJax && window.MathJax.typesetPromise) {
+        window.MathJax.typesetPromise();
+      }
+
+      // Re-trigger Canvas layout when returning to simulation
+      if (activeKey === 'sim') {
+        setTimeout(() => {
+          resizeCanvas();
+        }, 50);
+      }
+    }
+
+    // =========================================================================
+    // PHYSICAL SIMULATION & HARDWARE STATE
+    // =========================================================================
+    const state = {
+      autoPilot: true,
+      time: 0,
+      
+      // Environmental controls
+      dustRate: 12,        // grains per sec
+      irradiance: 1361,    // W/m^2
+      busBias: 280,        // VDC
+      pulseField: 3.2,     // kV/mm
+      
+      // Dynamic Physical Variables
+      isolationR: 48.2,    // Megaohms
+      dutyCycle: 0.442,    // MPPT Duty Cycle D (0 to 1)
+      dustGrainsOnGap: 4,  // active bridging particles
+      isRepelling: false,
+      repelTimer: 0,
+      leakageCurrent: 0.12,// microamps
+      
+      // Chart History Buffers (20 samples)
+      historyTime: [],
+      historyR: [],
+      historyDuty: [],
+      historyPulse: [],
+      trajectoryPoints: []
+    };
+
+    // Particles in the canvas viewport
+    const particles = [];
+    for (let i = 0; i < 40; i++) {
+      particles.push({
+        x: Math.random() * 500,
+        y: Math.random() * 260,
+        vx: (Math.random() - 0.5) * 0.4,
+        vy: 0.2 + Math.random() * 0.8,
+        radius: 1.5 + Math.random() * 2.5,
+        charge: -0.8 - Math.random() * 1.5,
+        stuck: false
+      });
+    }
+
+    // =========================================================================
+    // CANVAS RENDERING (HIGH-DPI RETINA READY)
+    // =========================================================================
+    const canvas = document.getElementById('simCanvas');
+    const ctx = canvas.getContext('2d');
+
+    function resizeCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 600;
+      const h = rect.height || 280;
+      const dpr = window.devicePixelRatio || 1;
+      
+      canvas.width = w * dpr;
+      canvas.height = h * dpr;
+      ctx.resetTransform();
+      ctx.scale(dpr, dpr);
+    }
+    window.addEventListener('resize', resizeCanvas);
+
+    function drawSimulation() {
+      const rect = canvas.getBoundingClientRect();
+      const w = rect.width || 600;
+      const h = rect.height || 280;
+
+      // Deep space canvas background
+      ctx.fillStyle = '#03050a';
+      ctx.fillRect(0, 0, w, h);
+
+      // Draw Solar Cell Silicon Substrates on Left and Right
+      const gapWidth = 140;
+      const cellLeftWidth = (w - gapWidth) / 2;
+      const cellRightStart = cellLeftWidth + gapWidth;
+
+      // Left Cell
+      const gradL = ctx.createLinearGradient(0, 0, cellLeftWidth, 0);
+      gradL.addColorStop(0, '#0f172a');
+      gradL.addColorStop(1, '#1e293b');
+      ctx.fillStyle = gradL;
+      ctx.fillRect(0, 20, cellLeftWidth, h - 40);
+
+      // Right Cell
+      const gradR = ctx.createLinearGradient(cellRightStart, 0, w, 0);
+      gradR.addColorStop(0, '#1e293b');
+      gradR.addColorStop(1, '#0f172a');
+      ctx.fillStyle = gradR;
+      ctx.fillRect(cellRightStart, 20, cellLeftWidth, h - 40);
+
+      // Triple junction anti-reflective coating grid lines
+      ctx.strokeStyle = 'rgba(6, 182, 212, 0.15)';
+      ctx.lineWidth = 1;
+      for (let y = 35; y < h - 40; y += 22) {
+        ctx.beginPath();
+        ctx.moveTo(0, y);
+        ctx.lineTo(cellLeftWidth, y);
+        ctx.moveTo(cellRightStart, y);
+        ctx.lineTo(w, y);
+        ctx.stroke();
+      }
+
+      // Copper / Silver Interconnect Metallization Busbars
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(cellLeftWidth - 14, 20, 14, h - 40);
+      ctx.fillRect(cellRightStart, 20, 14, h - 40);
+
+      // Metallization Labeling
+      ctx.font = '10px JetBrains Mono';
+      ctx.fillStyle = 'rgba(255,255,255,0.7)';
+      ctx.fillText('CELL STRING A (+)', 15, 38);
+      ctx.fillText('CELL STRING B (GND)', cellRightStart + 22, 38);
+
+      // Repeller Electrostatic Electrodes inside gap
+      ctx.strokeStyle = state.isRepelling ? 'rgba(168, 85, 247, 0.9)' : 'rgba(168, 85, 247, 0.25)';
+      ctx.lineWidth = 2;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      ctx.moveTo(cellLeftWidth + 35, 20);
+      ctx.lineTo(cellLeftWidth + 35, h - 20);
+      ctx.moveTo(cellRightStart - 35, 20);
+      ctx.lineTo(cellRightStart - 35, h - 20);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // If repelling, draw dynamic electric field force lines
+      if (state.isRepelling) {
+        ctx.strokeStyle = 'rgba(192, 132, 252, 0.45)';
+        ctx.lineWidth = 1.5;
+        for (let y = 30; y < h - 20; y += 20) {
+          ctx.beginPath();
+          ctx.moveTo(cellLeftWidth + 14, y);
+          ctx.bezierCurveTo(cellLeftWidth + 70, y - 18, cellLeftWidth + 70, y + 18, cellRightStart - 2, y);
+          ctx.stroke();
+        }
+
+        // Repeller burst aura
+        ctx.fillStyle = 'rgba(168, 85, 247, 0.08)';
+        ctx.fillRect(cellLeftWidth, 0, gapWidth, h);
+      }
+
+      // Draw Conductive Shunt Arc filaments if isolation is critical
+      if (state.isolationR < 2.5 && state.dustGrainsOnGap > 2) {
+        ctx.strokeStyle = 'rgba(244, 63, 94, 0.85)';
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#f43f5e';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        let currX = cellLeftWidth;
+        let currY = h / 2 + (Math.random() - 0.5) * 30;
+        ctx.moveTo(currX, currY);
+        while (currX < cellRightStart) {
+          currX += 15 + Math.random() * 20;
+          currY += (Math.random() - 0.5) * 22;
+          ctx.lineTo(currX, currY);
+        }
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // Draw and update Dust Particles
+      for (let p of particles) {
+        // Normal motion
+        if (!p.stuck) {
+          p.x += p.vx;
+          p.y += p.vy;
+
+          // Check if entering interconnect gap and adhering under strong electric field
+          if (p.x > cellLeftWidth - 5 && p.x < cellRightStart + 5 && p.y > 60 && p.y < h - 60) {
+            // Electrostatic precipitation capture probability
+            if (Math.random() < 0.02) {
+              p.stuck = true;
+              p.vx = 0;
+              p.vy = 0;
+            }
+          }
+
+          // Boundary wraps
+          if (p.y > h) {
+            p.y = 0;
+            p.x = Math.random() * w;
+          }
+          if (p.x < 0) p.x = w;
+          if (p.x > w) p.x = 0;
+        }
+
+        // Repeller pulse actuation: fling particles upward out of the gap!
+        if (state.isRepelling && p.x > cellLeftWidth - 20 && p.x < cellRightStart + 20) {
+          p.stuck = false;
+          p.vy = - (6 + Math.random() * 8);
+          p.vx = (p.x < w / 2 ? -1 : 1) * (3 + Math.random() * 4);
+        }
+
+        // Render Grain
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+        if (p.stuck) {
+          ctx.fillStyle = '#f59e0b';
+          ctx.shadowColor = '#f59e0b';
+          ctx.shadowBlur = 4;
+        } else {
+          ctx.fillStyle = 'rgba(217, 119, 6, 0.7)';
+          ctx.shadowBlur = 0;
+        }
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
+
+      // Count stuck particles in bridging gap
+      const stuckInGap = particles.filter(p => p.stuck && p.x >= cellLeftWidth - 10 && p.x <= cellRightStart + 10).length;
+      state.dustGrainsOnGap = stuckInGap;
+    }
+
+    // =========================================================================
+    // CHART.JS TELEMETRY INITIALIZATION
+    // =========================================================================
+    let phaseSpaceChart, resTimeChart, dutyTimeChart;
+
+    function initCharts() {
+      // 1. Primary Phase Space Chart (R vs D)
+      const ctxPhase = document.getElementById('phaseSpaceChart').getContext('2d');
+      phaseSpaceChart = new Chart(ctxPhase, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            // Ideal Nominal Corridor (Green)
+            {
+              label: 'Nominal Operating Corridor',
+              data: [
+                { x: 10, y: 0.42 }, { x: 20, y: 0.43 }, { x: 35, y: 0.44 }, { x: 50, y: 0.445 }, { x: 60, y: 0.45 }
+              ],
+              showLine: true,
+              borderColor: 'rgba(16, 185, 129, 0.8)',
+              borderWidth: 2,
+              pointRadius: 0,
+              backgroundColor: 'rgba(16, 185, 129, 0.1)',
+              fill: true
+            },
+            // Anomaly Hazard Threshold (Red line / region)
+            {
+              label: 'Dust Shunt Anomaly Zone',
+              data: [
+                { x: 0.2, y: 0.58 }, { x: 1.0, y: 0.55 }, { x: 2.5, y: 0.52 }, { x: 5.0, y: 0.49 }, { x: 8.0, y: 0.47 }
+              ],
+              showLine: true,
+              borderColor: 'rgba(244, 63, 94, 0.8)',
+              borderDash: [5, 5],
+              borderWidth: 2,
+              pointRadius: 0,
+              backgroundColor: 'rgba(244, 63, 94, 0.15)',
+              fill: true
+            },
+            // Dynamic Live Trajectory Trail
+            {
+              label: 'System Trajectory',
+              data: [],
+              showLine: true,
+              borderColor: 'rgba(6, 182, 212, 0.4)',
+              borderWidth: 1.5,
+              pointRadius: 2,
+              pointBackgroundColor: '#06b6d4'
+            },
+            // Active State Head
+            {
+              label: 'Current Operating Point',
+              data: [{ x: state.isolationR, y: state.dutyCycle }],
+              pointRadius: 7,
+              pointBackgroundColor: '#22d3ee',
+              pointBorderColor: '#ffffff',
+              pointBorderWidth: 2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: {
+            legend: { display: false }
+          },
+          scales: {
+            x: {
+              type: 'linear',
+              position: 'bottom',
+              min: 0,
+              max: 60,
+              title: {
+                display: true,
+                text: 'Isolation Resistance R (MΩ)',
+                color: '#9ca3af',
+                font: { size: 10, family: 'JetBrains Mono' }
+              },
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#9ca3af', font: { size: 9, family: 'JetBrains Mono' } }
+            },
+            y: {
+              min: 0.35,
+              max: 0.65,
+              title: {
+                display: true,
+                text: 'MPPT Duty Cycle D',
+                color: '#9ca3af',
+                font: { size: 10, family: 'JetBrains Mono' }
+              },
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#9ca3af', font: { size: 9, family: 'JetBrains Mono' } }
+            }
+          }
+        }
+      });
+
+      // 2. Resistance vs Time
+      const ctxRes = document.getElementById('resTimeChart').getContext('2d');
+      resTimeChart = new Chart(ctxRes, {
+        type: 'line',
+        data: {
+          labels: state.historyTime,
+          datasets: [{
+            data: state.historyR,
+            borderColor: '#10b981',
+            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+            fill: true,
+            tension: 0.3,
+            borderWidth: 2,
+            pointRadius: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { display: false },
+            y: {
+              min: 0,
+              max: 60,
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#9ca3af', font: { size: 9, family: 'JetBrains Mono' } }
+            }
+          }
+        }
+      });
+
+      // 3. Duty Cycle & Repeller vs Time
+      const ctxDuty = document.getElementById('dutyTimeChart').getContext('2d');
+      dutyTimeChart = new Chart(ctxDuty, {
+        type: 'line',
+        data: {
+          labels: state.historyTime,
+          datasets: [
+            {
+              label: 'Duty Cycle D',
+              data: state.historyDuty,
+              borderColor: '#06b6d4',
+              borderWidth: 2,
+              tension: 0.3,
+              pointRadius: 0,
+              yAxisID: 'y'
+            },
+            {
+              label: 'Pulse Trigger',
+              data: state.historyPulse,
+              borderColor: '#c084fc',
+              backgroundColor: 'rgba(192, 132, 252, 0.25)',
+              fill: true,
+              borderWidth: 1,
+              stepped: true,
+              pointRadius: 0,
+              yAxisID: 'y1'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          animation: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { display: false },
+            y: {
+              min: 0.35,
+              max: 0.65,
+              grid: { color: 'rgba(255, 255, 255, 0.05)' },
+              ticks: { color: '#06b6d4', font: { size: 9, family: 'JetBrains Mono' } }
+            },
+            y1: {
+              position: 'right',
+              min: 0,
+              max: 1.2,
+              display: false
+            }
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // DYNAMIC CLOSED-LOOP PHYSICS UPDATE LOOP
+    // =========================================================================
+    let tickCount = 0;
+
+    function physicsStep() {
+      state.time += 0.05;
+      tickCount++;
+
+      // 1. Degradation step: Each bridging grain on the gap provides parallel shunting conductance
+      // G_shunt = sum( 1 / R_grain )
+      const shuntConductance = state.dustGrainsOnGap * 0.18; // micro-mhos
+      const baseR = 50.0; // clean baseline in M-Ohms
+      const targetR = 1 / ((1 / baseR) + shuntConductance);
+
+      // Smooth convergence of isolation resistance
+      state.isolationR += (targetR - state.isolationR) * 0.12;
+
+      // Leakage current: I = V / R (microamps)
+      state.leakageCurrent = state.busBias / Math.max(state.isolationR, 0.1);
+
+      // 2. MPPT Duty Cycle reaction: As current is shunted, MPPT algorithm pushes duty cycle higher
+      // in an attempt to retain maximum power transfer against falling array voltage
+      const baselineDuty = 0.44 + (1 - (state.irradiance / 1361)) * 0.05;
+      const shuntComp = (baseR / Math.max(state.isolationR, 0.8) - 1) * 0.012;
+      const targetDuty = baselineDuty + shuntComp;
+      state.dutyCycle += (targetDuty - state.dutyCycle) * 0.1;
+
+      // 3. Autonomous Mitigation (State Observer: detect R dropping while D rising)
+      if (state.autoPilot) {
+        if (state.isolationR < 15.0 && state.dutyCycle > 0.46 && !state.isRepelling) {
+          triggerRepellerPulse();
+        }
+      }
+
+      // Handle Repeller Active Duration
+      if (state.isRepelling) {
+        state.repelTimer--;
+        if (state.repelTimer <= 0) {
+          state.isRepelling = false;
+          document.getElementById('canvasRepelBanner').classList.add('hidden');
+        }
+      }
+
+      // 4. Update Telemetry History (Every 3rd tick to optimize performance)
+      if (tickCount % 3 === 0) {
+        updateTelemetryRecords();
+      }
+
+      // 5. Draw Hardware Canvas
+      drawSimulation();
+    }
+
+    function triggerRepellerPulse() {
+      state.isRepelling = true;
+      state.repelTimer = 22; // ticks duration
+      document.getElementById('canvasRepelBanner').classList.remove('hidden');
+
+      // Coulombic blast: Clear stuck particles from gap
+      for (let p of particles) {
+        if (p.stuck) {
+          p.stuck = false;
+          p.vy = - (7 + Math.random() * 8);
+          p.vx = (Math.random() - 0.5) * 8;
+        }
+      }
+    }
+
+    function updateTelemetryRecords() {
+      // Buffer management (Keep last 25 records)
+      if (state.historyTime.length > 25) {
+        state.historyTime.shift();
+        state.historyR.shift();
+        state.historyDuty.shift();
+        state.historyPulse.shift();
+      }
+
+      state.historyTime.push(state.time.toFixed(1));
+      state.historyR.push(state.isolationR);
+      state.historyDuty.push(state.dutyCycle);
+      state.historyPulse.push(state.isRepelling ? 1 : 0);
+
+      // Trajectory trace buffer
+      if (state.trajectoryPoints.length > 18) {
+        state.trajectoryPoints.shift();
+      }
+      state.trajectoryPoints.push({ x: state.isolationR, y: state.dutyCycle });
+
+      // Update Phase Space Chart
+      if (phaseSpaceChart) {
+        phaseSpaceChart.data.datasets[2].data = [...state.trajectoryPoints];
+        phaseSpaceChart.data.datasets[3].data = [{ x: state.isolationR, y: state.dutyCycle }];
+        phaseSpaceChart.update('none');
+      }
+
+      // Update Resistance Chart
+      if (resTimeChart) {
+        resTimeChart.update('none');
+      }
+
+      // Update Duty Chart
+      if (dutyTimeChart) {
+        dutyTimeChart.update('none');
+      }
+
+      // UI Labels & Badges
+      document.getElementById('currentRDLabel').innerText = 
+        `R = ${state.isolationR.toFixed(1)} MΩ | D = ${state.dutyCycle.toFixed(3)}`;
+      document.getElementById('resValPill').innerText = `${state.isolationR.toFixed(1)} MΩ`;
+      document.getElementById('dutyValPill').innerText = `${state.dutyCycle.toFixed(3)}`;
+      document.getElementById('leakageDisplay').innerText = `Leakage: ${state.leakageCurrent.toFixed(2)} µA`;
+
+      // Status Pill and Arc Warning state
+      const pill = document.getElementById('systemStatePill');
+      if (state.isolationR < 5.0) {
+        pill.className = "text-rose-400 font-bold flex items-center gap-1.5 animate-pulse";
+        pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-rose-400"></span> SHUNT ARC HAZARD';
+      } else if (state.isolationR < 20.0) {
+        pill.className = "text-amber-400 font-bold flex items-center gap-1.5";
+        pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-amber-400"></span> DUST BRIDGING';
+      } else {
+        pill.className = "text-emerald-400 font-bold flex items-center gap-1.5";
+        pill.innerHTML = '<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> NOMINAL';
+      }
+    }
+
+    // =========================================================================
+    // USER CONTROLS & MANUAL FAULT INJECTION
+    // =========================================================================
+    function toggleAutoPilot() {
+      state.autoPilot = !state.autoPilot;
+      const btn = document.getElementById('autoPilotBtn');
+      if (state.autoPilot) {
+        btn.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 text-cyan-400"></i><span>AUTO-MITIGATION: ON</span>`;
+        btn.className = "px-3.5 py-2 rounded-lg text-xs font-mono font-semibold transition border border-cyan-500/50 bg-cyan-950/40 text-cyan-300 hover:bg-cyan-900/60 flex items-center gap-2";
+      } else {
+        btn.innerHTML = `<i data-lucide="shield-alert" class="w-4 h-4 text-amber-400"></i><span>AUTO-MITIGATION: OFF</span>`;
+        btn.className = "px-3.5 py-2 rounded-lg text-xs font-mono font-semibold transition border border-amber-500/50 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60 flex items-center gap-2";
+      }
+      lucide.createIcons();
+    }
+
+    function injectDustStorm() {
+      // Artificially adhere 8 particles across interconnect gap
+      let count = 0;
+      for (let p of particles) {
+        if (!p.stuck && count < 8) {
+          p.stuck = true;
+          const rect = canvas.getBoundingClientRect();
+          const w = rect.width || 600;
+          const h = rect.height || 280;
+          p.x = w / 2 + (Math.random() - 0.5) * 80;
+          p.y = 80 + Math.random() * (h - 160);
+          count++;
+        }
+      }
+    }
+
+    function triggerManualRepel() {
+      triggerRepellerPulse();
+    }
+
+    function resetSimulation() {
+      for (let p of particles) {
+        p.stuck = false;
+        p.y = Math.random() * 260;
+      }
+      state.isolationR = 48.2;
+      state.dutyCycle = 0.442;
+      state.dustGrainsOnGap = 0;
+      state.isRepelling = false;
+      state.trajectoryPoints = [];
+    }
+
+    function updateDustRate(val) {
+      state.dustRate = parseInt(val);
+      document.getElementById('dustRateLabel').innerText = `${val} grains/s`;
+    }
+
+    function updateIrradiance(val) {
+      state.irradiance = parseInt(val);
+      document.getElementById('irradianceLabel').innerText = `${val} W/m²`;
+    }
+
+    function updateBusBias(val) {
+      state.busBias = parseInt(val);
+      document.getElementById('busBiasLabel').innerText = `${val} VDC`;
+    }
+
+    function updatePulseField(val) {
+      state.pulseField = parseFloat(val);
+      document.getElementById('pulseFieldLabel').innerText = `${val} kV / mm`;
+    }
+
+    // =========================================================================
+    // WINDOW INITIALIZATION
+    // =========================================================================
+    window.onload = function() {
+      resizeCanvas();
+      initCharts();
+      lucide.createIcons();
+
+      // Start continuous real-time physics loop at 40ms intervals (~25 FPS)
+      setInterval(physicsStep, 40);
+    };
+  </script>
+</body>
+</html>
